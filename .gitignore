@@ -1,0 +1,14 @@
+# Environment
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Data
+profiles.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
