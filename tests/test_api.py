@@ -89,6 +89,7 @@ async def test_delete_nonexistent_profile(client, tmp_path, monkeypatch):
 @pytest.mark.anyio
 async def test_send_email_success(client, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "profiles_file", str(tmp_path / "profiles.json"))
+    monkeypatch.setattr(settings, "default_profile_id", "sender")
 
     profile = {
         "profile_id": "sender",
@@ -102,7 +103,6 @@ async def test_send_email_success(client, tmp_path, monkeypatch):
 
     with patch("email_service.sender.aiosmtplib.send", new_callable=AsyncMock) as mock_send:
         r = await client.post("/email/send", json={
-            "profile": "sender",
             "to": ["recipient@example.com"],
             "subject": "Test",
             "text": "Hello",
@@ -113,11 +113,12 @@ async def test_send_email_success(client, tmp_path, monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_send_email_no_body(client):
+async def test_send_email_no_body(client, monkeypatch):
+    monkeypatch.setattr(settings, "default_profile_id", "x")
+
     r = await client.post("/email/send", json={
         "to": ["recipient@example.com"],
         "subject": "Test",
-        "profile": "x",
     })
     assert r.status_code == 400
     assert "text" in r.json()["detail"].lower() or "html" in r.json()["detail"].lower()
@@ -126,10 +127,9 @@ async def test_send_email_no_body(client):
 @pytest.mark.anyio
 async def test_send_email_unknown_profile(client, tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "profiles_file", str(tmp_path / "profiles.json"))
-    monkeypatch.setattr(settings, "default_profile_id", "")
+    monkeypatch.setattr(settings, "default_profile_id", "nonexistent")
 
     r = await client.post("/email/send", json={
-        "profile": "nonexistent",
         "to": ["recipient@example.com"],
         "subject": "Test",
         "text": "Hello",

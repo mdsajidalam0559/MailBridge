@@ -5,7 +5,7 @@ A lightweight, provider-agnostic email service built with FastAPI. Supports send
 ## Features
 
 - REST API for sending emails with HTML and plain text support
-- Multi-profile SMTP management (register and switch between accounts)
+- SMTP profile management (register and store accounts)
 - Auto-registration of a default SMTP profile from environment variables on startup
 - Async email delivery using `aiosmtplib`
 - Docker support
@@ -74,6 +74,7 @@ cp .env.example .env
 | `SMTP_PASSWORD` | SMTP login password or app password | |
 | `FROM_EMAIL` | Sender email address | |
 | `FROM_NAME` | Sender display name | `Email Service` |
+| `VERIFY_SSL` | Verify SMTP server SSL certificate | `true` |
 | `PROFILES_FILE` | Path to the JSON file for storing profiles | `profiles.json` |
 | `HOST` | Server bind address | `127.0.0.1` |
 | `PORT` | Server port | `9001` |
@@ -96,7 +97,7 @@ The interactive API documentation is available at `http://localhost:9001/docs`.
 
 ### Sending an Email
 
-Send an email using the default profile:
+The sender details (`from_email`, `from_name`) and SMTP credentials are automatically pulled from the default profile configured in `.env`.
 
 ```bash
 curl -X POST http://localhost:9001/email/send \
@@ -108,22 +109,17 @@ curl -X POST http://localhost:9001/email/send \
   }'
 ```
 
-Send using a specific profile with optional sender override:
+Plain text email:
 
 ```bash
 curl -X POST http://localhost:9001/email/send \
   -H "Content-Type: application/json" \
   -d '{
-    "profile": "gmail",
     "to": ["recipient@example.com"],
     "subject": "Hello",
-    "text": "Plain text email body",
-    "from_email": "custom@gmail.com",
-    "from_name": "Custom Sender"
+    "text": "Plain text email body"
   }'
 ```
-
-The `from_email` and `from_name` fields are optional. When omitted, the values from the SMTP profile are used.
 
 ### Managing SMTP Profiles
 
@@ -219,10 +215,10 @@ Run the test suite:
 pytest tests/ -v
 ```
 
-A manual smoke test script (`test_email.py`) is also included for testing against a live server. Update the recipient address before running:
+A manual smoke test script (`test_all_endpoints.py`) is also included for testing against a live server:
 
 ```bash
-python test_email.py
+python test_all_endpoints.py
 ```
 
 ## Project Structure
@@ -237,7 +233,7 @@ email_service/
 tests/
     test_api.py         Pytest suite (profiles, sending)
 main.py                 FastAPI application entry point
-test_email.py           Manual smoke test script
+test_all_endpoints.py   Manual smoke test script
 Dockerfile              Container image definition
 docker-compose.yml      Docker Compose configuration
 .env.example            Environment variable template

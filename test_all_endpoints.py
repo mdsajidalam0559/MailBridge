@@ -1,7 +1,5 @@
 import unittest
 import requests
-import json
-import time
 
 BASE_URL = "http://localhost:9001"
 
@@ -77,26 +75,22 @@ class TestEmailAPI(unittest.TestCase):
         else:
             self.fail(f"Unexpected status code: {response.status_code}")
 
-    def test_05_send_email_specific_profile(self):
-        """Test POST /email/send with specific profile"""
-        print("\nTesting Send Email (Specific Profile)...")
+    def test_05_send_email_html(self):
+        """Test POST /email/send with HTML body"""
+        print("\nTesting Send Email (HTML)...")
         payload = {
-            "profile": "test_profile",
             "to": ["test@example.com"],
-            "subject": "Test Email via Profile",
-            "text": "This is a test email."
+            "subject": "Test HTML Email",
+            "html": "<h1>Hello</h1><p>This is a test.</p>"
         }
         response = requests.post(f"{BASE_URL}/email/send", json=payload)
-        
-        # Since 'test_profile' has fake creds, this MUST fail with 500, but that proves the API tried to use it.
-        # However, checking if it *tried* to use the correct profile is hard without logs.
-        # But if we get a 500 with a connection error to smtp.example.com, that's a pass.
+
         if response.status_code == 200:
-             print("✅ Email Sent Successfully (Unexpected for fake creds)")
+            print("✅ Email Sent Successfully")
         elif response.status_code == 500:
-             print(f"✅ API attempted to send (failed as expected with fake creds): {response.json()['detail']}")
+            print(f"⚠️  Email try failed (likely SMTP credentials): {response.json()['detail']}")
         else:
-             self.fail(f"Unexpected status code: {response.status_code}")
+            self.fail(f"Unexpected status code: {response.status_code}")
 
     def test_06_send_email_missing_body(self):
         """Test POST /email/send validation"""

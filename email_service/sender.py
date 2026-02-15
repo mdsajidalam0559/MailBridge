@@ -49,8 +49,8 @@ async def send(message: EmailMessage, profile: SmtpProfile) -> dict:
     start_tls = profile.smtp_port == 587
     tls_context = _create_ssl_context(verify=profile.verify_ssl)
 
-    sender_email = message.from_email or profile.from_email
-    sender_name = message.from_name or profile.from_name
+    sender_email = profile.from_email
+    sender_name = profile.from_name
 
     mime = MIMEMultipart("alternative")
     mime["From"] = formataddr((sender_name, sender_email))

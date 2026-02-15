@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     from_email: str = ""
     from_name: str = "Email Service"
+    verify_ssl: bool = True
 
     # App settings
     host: str = "127.0.0.1"

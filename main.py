@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 
-from email_service import send, profiles, SmtpProfile, SendRequest, settings
+from email_service import send, profiles, SmtpProfile, EmailMessage, settings
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -33,6 +33,7 @@ async def lifespan(app: FastAPI):
             smtp_password=settings.smtp_password,
             from_email=settings.from_email or settings.smtp_user,
             from_name=settings.from_name,
+            verify_ssl=settings.verify_ssl,
         ))
         logger.info("Default profile '%s' registered from .env", settings.default_profile_id)
     yield
@@ -50,15 +51,14 @@ app = FastAPI(
 
 
 @app.post("/email/send", tags=["Email"])
-async def send_email(req: SendRequest):
-    """Send an email using a registered SMTP profile."""
+async def send_email(req: EmailMessage):
+    """Send an email using the default SMTP profile."""
     if not req.text and not req.html:
         raise HTTPException(status_code=400, detail="Provide 'text' or 'html' body.")
 
-    # Use default profile if none specified
-    profile_id = req.profile or settings.default_profile_id
+    profile_id = settings.default_profile_id
     if not profile_id:
-        raise HTTPException(status_code=400, detail="No profile specified and no default configured.")
+        raise HTTPException(status_code=400, detail="No default profile configured.")
 
     profile = profiles.get(profile_id)
     if not profile:
