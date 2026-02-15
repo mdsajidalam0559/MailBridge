@@ -8,14 +8,43 @@ A lightweight, provider-agnostic email service built with FastAPI. Supports send
 - Multi-profile SMTP management (register and switch between accounts)
 - Auto-registration of a default SMTP profile from environment variables on startup
 - Async email delivery using `aiosmtplib`
+- Docker support
 - Usable as a standalone server or as an embedded Python module
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.10+ (for local setup) or Docker
 - SMTP credentials from your email provider (e.g., Gmail App Password)
 
 ## Installation
+
+### Using Docker (recommended)
+
+```bash
+git clone <repository-url>
+cd sms_service_personal
+
+cp .env.example .env
+# Edit .env with your SMTP credentials
+
+docker compose up -d
+```
+
+The service will be available at `http://localhost:9001`.
+
+To rebuild after code changes:
+
+```bash
+docker compose up -d --build
+```
+
+To stop:
+
+```bash
+docker compose down
+```
+
+### Manual Setup
 
 ```bash
 git clone <repository-url>
@@ -23,7 +52,7 @@ cd sms_service_personal
 
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Configuration
@@ -209,8 +238,11 @@ tests/
     test_api.py         Pytest suite (profiles, sending)
 main.py                 FastAPI application entry point
 test_email.py           Manual smoke test script
+Dockerfile              Container image definition
+docker-compose.yml      Docker Compose configuration
 .env.example            Environment variable template
-requirements.txt        Python dependencies
+requirements.txt        Runtime dependencies
+requirements-dev.txt    Development and test dependencies
 ```
 
 ## License

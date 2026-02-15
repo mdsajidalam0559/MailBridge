@@ -1,0 +1,15 @@
+services:
+  email-api:
+    build: .
+    ports:
+      - "9001:9001"
+    env_file:
+      - .env
+    volumes:
+      - email-data:/app/data
+    environment:
+      - PROFILES_FILE=data/profiles.json
+    restart: unless-stopped
+
+volumes:
+  email-data:

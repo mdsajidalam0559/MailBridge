@@ -1,9 +1,12 @@
 venv/
 __pycache__/
 *.pyc
-.git
+.git/
 .env
 profiles.json
+tests/
+test_email.py
 .DS_Store
 .vscode/
 .idea/
+README.md
