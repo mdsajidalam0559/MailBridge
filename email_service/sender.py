@@ -3,6 +3,7 @@ Email Sender — sends emails using a given SMTP profile.
 Works with any email provider (Gmail, Outlook, Zoho, custom domains, etc.)
 """
 
+import logging
 import ssl
 
 from email.mime.text import MIMEText
@@ -13,12 +14,15 @@ import aiosmtplib
 
 from .models import SmtpProfile, EmailMessage
 
+logger = logging.getLogger(__name__)
 
-def _create_ssl_context() -> ssl.SSLContext:
-    """Create an SSL context that works with all providers (including self-signed certs)."""
+
+def _create_ssl_context(*, verify: bool = True) -> ssl.SSLContext:
+    """Create an SSL context. Verifies certificates by default."""
     ctx = ssl.create_default_context()
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE
+    if not verify:
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
     return ctx
 
 
@@ -43,7 +47,7 @@ async def send(message: EmailMessage, profile: SmtpProfile) -> dict:
     """
     use_tls = profile.smtp_port == 465
     start_tls = profile.smtp_port == 587
-    tls_context = _create_ssl_context()
+    tls_context = _create_ssl_context(verify=profile.verify_ssl)
 
     sender_email = message.from_email or profile.from_email
     sender_name = message.from_name or profile.from_name
@@ -69,8 +73,8 @@ async def send(message: EmailMessage, profile: SmtpProfile) -> dict:
             start_tls=start_tls,
             tls_context=tls_context,
         )
-        print(f"✅ Email sent to {message.to} via {profile.profile_id} ({profile.smtp_host})")
+        logger.info("Email sent to %s via %s (%s)", message.to, profile.profile_id, profile.smtp_host)
         return {"status": "success", "profile_used": profile.profile_id}
     except Exception as e:
-        print(f"❌ Failed via {profile.profile_id}: {e}")
+        logger.error("Failed via %s: %s", profile.profile_id, e)
         raise

@@ -25,7 +25,7 @@ Usage as a standalone server:
     uvicorn main:app --reload
 """
 
-from .models import SmtpProfile, EmailMessage, SendRequest, ProfileRequest
+from .models import SmtpProfile, EmailMessage, SendRequest
 from .sender import send
 from . import profiles
 from .config import settings
@@ -36,6 +36,5 @@ __all__ = [
     "SmtpProfile",
     "EmailMessage",
     "SendRequest",
-    "ProfileRequest",
     "settings",
 ]

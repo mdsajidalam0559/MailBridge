@@ -13,8 +13,9 @@ class SmtpProfile(BaseModel):
     smtp_port: int = 587
     smtp_user: str
     smtp_password: str
-    from_email: str
+    from_email: EmailStr
     from_name: str = "Email Service"
+    verify_ssl: bool = True
 
 
 class EmailMessage(BaseModel):
@@ -27,22 +28,6 @@ class EmailMessage(BaseModel):
     from_name: Optional[str] = None
 
 
-class SendRequest(BaseModel):
+class SendRequest(EmailMessage):
     """API request body for sending an email via a named profile."""
     profile: Optional[str] = None   # Falls back to default from .env if omitted
-    to: List[EmailStr]
-    subject: str
-    text: Optional[str] = None
-    html: Optional[str] = None
-    from_name: Optional[str] = None
-
-
-class ProfileRequest(BaseModel):
-    """API request body for registering an SMTP profile."""
-    profile_id: str
-    smtp_host: str
-    smtp_port: int = 587
-    smtp_user: str
-    smtp_password: str
-    from_email: str
-    from_name: str = "Email Service"

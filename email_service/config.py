@@ -3,7 +3,6 @@ Configuration loader for the Email Service.
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -19,8 +18,9 @@ class Settings(BaseSettings):
     from_name: str = "Email Service"
 
     # App settings
+    host: str = "127.0.0.1"
+    port: int = 9001
     profiles_file: str = "profiles.json"
-    api_key: str = ""
 
     model_config = SettingsConfigDict(env_file=".env", env_ignore_empty=True)
 

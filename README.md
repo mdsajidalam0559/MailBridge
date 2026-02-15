@@ -1,69 +1,107 @@
 # Self-Hosted Email API
 
-Send emails from **any email account** via a simple REST API or Python import.
+A lightweight, provider-agnostic email service built with FastAPI. Supports sending emails through any SMTP provider (Gmail, Outlook, Zoho, Hostinger, custom domains, etc.) via a REST API or as an importable Python module.
 
-## Quick Start
+## Features
+
+- REST API for sending emails with HTML and plain text support
+- Multi-profile SMTP management (register and switch between accounts)
+- Auto-registration of a default SMTP profile from environment variables on startup
+- Async email delivery using `aiosmtplib`
+- Usable as a standalone server or as an embedded Python module
+
+## Prerequisites
+
+- Python 3.10+
+- SMTP credentials from your email provider (e.g., Gmail App Password)
+
+## Installation
 
 ```bash
-# Setup
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+git clone <repository-url>
+cd sms_service_personal
 
-# Configure (add your SMTP credentials)
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Configuration
+
+Copy the example environment file and fill in your SMTP credentials:
+
+```bash
 cp .env.example .env
-# Edit .env with your email details
-
-# Run
-uvicorn main:app --reload
 ```
 
-## Running Tests
+### Environment Variables
 
-To test the email sending functionality, ensure the server is running and then execute the test script:
+| Variable | Description | Default |
+|---|---|---|
+| `DEFAULT_PROFILE_ID` | Name for the auto-registered default profile | |
+| `SMTP_HOST` | SMTP server hostname | |
+| `SMTP_PORT` | SMTP port (`465` for SSL, `587` for STARTTLS) | `587` |
+| `SMTP_USER` | SMTP login username | |
+| `SMTP_PASSWORD` | SMTP login password or app password | |
+| `FROM_EMAIL` | Sender email address | |
+| `FROM_NAME` | Sender display name | `Email Service` |
+| `PROFILES_FILE` | Path to the JSON file for storing profiles | `profiles.json` |
+| `HOST` | Server bind address | `127.0.0.1` |
+| `PORT` | Server port | `9001` |
+
+## Usage
+
+### Starting the Server
 
 ```bash
-# Install test dependencies (included in requirements.txt)
-pip install -r requirements.txt
-
-# Run the test script
-python test_email.py
+python main.py
 ```
 
-Open **http://localhost:8000/docs** for interactive Swagger UI.
-
-## .env Configuration
+Or with uvicorn directly:
 
 ```bash
-DEFAULT_PROFILE_ID=nomoosh          # Profile name
-SMTP_HOST=smtp.hostinger.com        # Your SMTP server
-SMTP_PORT=465                       # 465 (SSL) or 587 (TLS)
-SMTP_USER=support@nomoosh.com       # Your email
-SMTP_PASSWORD=your-password         # App password or account password
-FROM_EMAIL=support@nomoosh.com      # Sender address
-FROM_NAME=Nomoosh Support           # Sender display name
+uvicorn main:app --reload --port 9001
 ```
 
-The default profile is **auto-registered on startup** — no extra steps needed.
+The interactive API documentation is available at `http://localhost:9001/docs`.
 
-## Send an Email
+### Sending an Email
+
+Send an email using the default profile:
 
 ```bash
-# Minimal — uses the default profile from .env
-curl -X POST http://localhost:8000/email/send \
+curl -X POST http://localhost:9001/email/send \
   -H "Content-Type: application/json" \
   -d '{
-    "to": ["client@example.com"],
-    "subject": "Hello!",
-    "html": "<h1>Hi!</h1><p>Sent from my API</p>"
+    "to": ["recipient@example.com"],
+    "subject": "Order Confirmation",
+    "html": "<h1>Thank you for your order</h1><p>Your order has been confirmed.</p>"
   }'
 ```
 
-## Multiple Accounts
-
-Register additional profiles via API:
+Send using a specific profile with optional sender override:
 
 ```bash
-curl -X POST http://localhost:8000/profiles \
+curl -X POST http://localhost:9001/email/send \
+  -H "Content-Type: application/json" \
+  -d '{
+    "profile": "gmail",
+    "to": ["recipient@example.com"],
+    "subject": "Hello",
+    "text": "Plain text email body",
+    "from_email": "custom@gmail.com",
+    "from_name": "Custom Sender"
+  }'
+```
+
+The `from_email` and `from_name` fields are optional. When omitted, the values from the SMTP profile are used.
+
+### Managing SMTP Profiles
+
+**Register a profile:**
+
+```bash
+curl -X POST http://localhost:9001/profiles \
   -H "Content-Type: application/json" \
   -d '{
     "profile_id": "gmail",
@@ -72,35 +110,49 @@ curl -X POST http://localhost:8000/profiles \
     "smtp_user": "you@gmail.com",
     "smtp_password": "app-password",
     "from_email": "you@gmail.com",
-    "from_name": "My Gmail"
+    "from_name": "My App",
+    "verify_ssl": true
   }'
 ```
 
-Then send using that profile:
+The `verify_ssl` field defaults to `true`. Set it to `false` only if your SMTP server uses a self-signed certificate.
+
+**List all profiles:**
 
 ```bash
-curl -X POST http://localhost:8000/email/send \
-  -H "Content-Type: application/json" \
-  -d '{
-    "profile": "gmail",
-    "to": ["someone@example.com"],
-    "subject": "From Gmail",
-    "text": "Hello from Gmail!"
-  }'
+curl http://localhost:9001/profiles
 ```
 
-## Use as a Python Module
+Passwords are masked in the response.
 
-Copy `email_service/` into your project:
+**Delete a profile:**
+
+```bash
+curl -X DELETE http://localhost:9001/profiles/gmail
+```
+
+### Using as a Python Module
+
+The `email_service` package can be imported directly into any Python project:
 
 ```python
 import asyncio
-from email_service import send, profiles, EmailMessage
+from email_service import send, profiles, SmtpProfile, EmailMessage
 
 async def main():
-    profile = profiles.get("nomoosh")
+    profiles.add(SmtpProfile(
+        profile_id="my_gmail",
+        smtp_host="smtp.gmail.com",
+        smtp_port=587,
+        smtp_user="you@gmail.com",
+        smtp_password="app-password",
+        from_email="you@gmail.com",
+        from_name="My App",
+    ))
+
+    profile = profiles.get("my_gmail")
     await send(
-        EmailMessage(to=["client@example.com"], subject="Hi!", text="Hello"),
+        EmailMessage(to=["recipient@example.com"], subject="Hello", text="Hello world"),
         profile,
     )
 
@@ -111,35 +163,56 @@ asyncio.run(main())
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/email/send` | Send an email |
-| `POST` | `/profiles` | Add/update SMTP profile |
-| `GET` | `/profiles` | List all profiles |
-| `DELETE` | `/profiles/{id}` | Delete a profile |
 | `GET` | `/` | Health check |
+| `POST` | `/email/send` | Send an email |
+| `POST` | `/profiles` | Register or update an SMTP profile |
+| `GET` | `/profiles` | List all profiles (passwords masked) |
+| `DELETE` | `/profiles/{profile_id}` | Delete a profile |
 
-## SMTP Reference
+## Supported SMTP Providers
 
 | Provider | Host | Port |
 |---|---|---|
-| Gmail / Workspace | `smtp.gmail.com` | 587 |
-| Outlook / O365 | `smtp.office365.com` | 587 |
+| Gmail / Google Workspace | `smtp.gmail.com` | 587 |
+| Outlook / Office 365 | `smtp.office365.com` | 587 |
 | Hostinger | `smtp.hostinger.com` | 465 |
 | Zoho | `smtp.zoho.com` | 465 |
 | GoDaddy | `smtpout.secureserver.net` | 465 |
 | Yahoo | `smtp.mail.yahoo.com` | 587 |
 
+Any SMTP-compatible provider can be used by specifying the appropriate host and port.
+
+## Testing
+
+Run the test suite:
+
+```bash
+pytest tests/ -v
+```
+
+A manual smoke test script (`test_email.py`) is also included for testing against a live server. Update the recipient address before running:
+
+```bash
+python test_email.py
+```
+
 ## Project Structure
 
 ```
-├── email_service/        ← Reusable Python package
-│   ├── __init__.py       # Public exports
-│   ├── config.py         # Settings (.env loader)
-│   ├── models.py         # Pydantic models
-│   ├── profiles.py       # Profile CRUD
-│   └── sender.py         # Async email sender
-├── main.py               # FastAPI server
-├── test_email.py         # Test script
-├── .env                  # Your credentials (git-ignored)
-├── .env.example          # Template
-└── requirements.txt
+email_service/
+    __init__.py         Public API exports
+    config.py           Settings loader (reads .env)
+    models.py           Pydantic data models
+    profiles.py         Profile CRUD with thread-safe file persistence
+    sender.py           Async SMTP email sender
+tests/
+    test_api.py         Pytest suite (profiles, sending)
+main.py                 FastAPI application entry point
+test_email.py           Manual smoke test script
+.env.example            Environment variable template
+requirements.txt        Python dependencies
 ```
+
+## License
+
+This project is provided as-is for personal and internal use.

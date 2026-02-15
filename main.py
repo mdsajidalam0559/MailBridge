@@ -2,13 +2,23 @@
 Self-Hosted Email API — FastAPI Server
 
 Run:
-    uvicorn main:app --reload
+    python main.py
+    # or
+    uvicorn main:app --reload --port 9001
 """
 
-from fastapi import FastAPI, HTTPException
+import logging
 from contextlib import asynccontextmanager
-from email_service import send, profiles, SmtpProfile, EmailMessage, SendRequest, ProfileRequest
-from email_service.config import settings
+
+from fastapi import FastAPI, HTTPException
+
+from email_service import send, profiles, SmtpProfile, SendRequest, settings
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+
+# ─── Lifespan ────────────────────────────────────────────────────────────────
 
 
 @asynccontextmanager
@@ -24,7 +34,7 @@ async def lifespan(app: FastAPI):
             from_email=settings.from_email or settings.smtp_user,
             from_name=settings.from_name,
         ))
-        print(f"✅ Default profile '{settings.default_profile_id}' registered from .env")
+        logger.info("Default profile '%s' registered from .env", settings.default_profile_id)
     yield
 
 
@@ -54,17 +64,9 @@ async def send_email(req: SendRequest):
     if not profile:
         raise HTTPException(status_code=404, detail=f"Profile '{profile_id}' not found. Register it via POST /profiles.")
 
-    message = EmailMessage(
-        to=req.to,
-        subject=req.subject,
-        text=req.text,
-        html=req.html,
-        from_name=req.from_name,
-    )
-
     try:
-        result = await send(message, profile)
-        return {"status": "success", "message": "Email sent", **result}
+        result = await send(req, profile)
+        return {"message": "Email sent", **result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -73,10 +75,9 @@ async def send_email(req: SendRequest):
 
 
 @app.post("/profiles", tags=["Profiles"])
-async def add_profile(req: ProfileRequest):
+async def add_profile(req: SmtpProfile):
     """Register or update an SMTP profile."""
-    profile = SmtpProfile(**req.model_dump())
-    return profiles.add(profile)
+    return profiles.add(req)
 
 
 @app.get("/profiles", tags=["Profiles"])
@@ -100,3 +101,9 @@ async def remove_profile(profile_id: str):
 @app.get("/", tags=["Health"])
 def health():
     return {"status": "running", "service": "Self-Hosted Email API v2.0"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host=settings.host, port=settings.port, reload=True)
