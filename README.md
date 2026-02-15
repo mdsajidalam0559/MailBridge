@@ -52,7 +52,7 @@ cd sms_service_personal
 
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 ## Configuration
@@ -241,8 +241,7 @@ test_email.py           Manual smoke test script
 Dockerfile              Container image definition
 docker-compose.yml      Docker Compose configuration
 .env.example            Environment variable template
-requirements.txt        Runtime dependencies
-requirements-dev.txt    Development and test dependencies
+requirements.txt        Python dependencies
 ```
 
 ## License

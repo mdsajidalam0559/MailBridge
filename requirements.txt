@@ -4,3 +4,7 @@ python-dotenv
 pydantic[email]
 pydantic-settings
 aiosmtplib
+requests
+pytest
+pytest-asyncio
+httpx
